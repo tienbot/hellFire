@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пиксельный огонь</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .container {
+            text-align: center;
+            z-index: 10;
+            padding: 2rem;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #ff7e5f, #feb47b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(255, 126, 95, 0.3);
+        }
+        
+        p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            color: #e0e0e0;
+        }
+        
+        .fire-button {
+            background: linear-gradient(to right, #ff7e5f, #feb47b);
+            border: none;
+            color: white;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(255, 126, 95, 0.4);
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        
+        .fire-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 126, 95, 0.6);
+        }
+        
+        .fire-button:active {
+            transform: translateY(1px);
+        }
+        
+        .fire-animation {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 50vh;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 100;
+        }
+        
+        .fire-animation.active {
+            opacity: 1;
+        }
+        
+        .fire-canvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .instructions {
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Пиксельный огонь</h1>
+        <p>Нажмите на кнопку ниже, чтобы увидеть анимацию пиксельного огня в нижней части экрана. Анимация продлится 4 секунды.</p>
+        <button class="fire-button" id="fireButton">Зажечь огонь</button>
+        <p class="instructions">Анимация создана с использованием Canvas и JavaScript для реалистичного эффекта пиксельного огня.</p>
+    </div>
+    
+    <div class="fire-animation" id="fireAnimation">
+        <canvas class="fire-canvas" id="fireCanvas"></canvas>
+    </div>
+    
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fireButton = document.getElementById('fireButton');
+            const fireAnimation = document.getElementById('fireAnimation');
+            const canvas = document.getElementById('fireCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            const ANIMATION_DURATION = 4000;
+            const FADE_OUT_START = 3500; 
+            
+            let animationId = null;
+            let animationStartTime = null;
+            let isReversePhase = false;
+            let isFadeOutPhase = false;
+            
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight / 5;
+            }
+            
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            const fireWidth = Math.ceil(canvas.width / 10);
+            const fireHeight = Math.ceil(canvas.height / 4); 
+            let firePixels = [];
+            let fireColors = [
+                {r: 7, g: 7, b: 7, a: 0},
+                {r: 31, g: 7, b: 7, a: 0.2},
+                {r: 47, g: 15, b: 7, a: 0.4},
+                {r: 71, g: 15, b: 7, a: 0.6},
+                {r: 87, g: 23, b: 7, a: 0.8},
+                {r: 103, g: 31, b: 7, a: 1},
+                {r: 119, g: 31, b: 7, a: 1},
+                {r: 143, g: 39, b: 7, a: 1},
+                {r: 159, g: 47, b: 7, a: 1},
+                {r: 175, g: 63, b: 7, a: 1},
+                {r: 191, g: 71, b: 7, a: 1},
+                {r: 199, g: 71, b: 7, a: 1},
+                {r: 223, g: 79, b: 7, a: 1},
+                {r: 223, g: 87, b: 7, a: 1},
+                {r: 223, g: 87, b: 7, a: 1},
+                {r: 255, g: 95, b: 7, a: 1}
+            ];
+            
+            function initFire() {
+                firePixels = [];
+                for (let y = 0; y < fireHeight; y++) {
+                    firePixels[y] = [];
+                    for (let x = 0; x < fireWidth; x++) {
+                        firePixels[y][x] = (y === fireHeight - 1) ? fireColors.length - 1 : 0;
+                    }
+                }
+            }
+            
+            initFire();
+            
+            function spreadFire() {
+                for (let y = 0; y < fireHeight - 1; y++) {
+                    for (let x = 0; x < fireWidth; x++) {
+                        const rand = Math.floor(Math.random() * 3);
+                        const dstX = Math.min(Math.max(x - rand + 1, 0), fireWidth - 1);
+                        let decay = (rand & 1);
+                        if (y < fireHeight / 3) {
+                            decay += Math.floor(Math.random() * 2);
+                        }
+                        firePixels[y][dstX] = Math.max(firePixels[y + 1][x] - decay, 0);
+                    }
+                }
+            }
+            
+            function spreadFireReverse() {
+                for (let y = fireHeight - 1; y > 0; y--) {
+                    for (let x = 0; x < fireWidth; x++) {
+                        const rand = Math.floor(Math.random() * 4);
+                        const dstX = Math.min(Math.max(x - rand + 1, 0), fireWidth - 1);
+                        let decay = Math.floor(Math.random() * 3) + 1;
+                        if (y > fireHeight / 2) {
+                            decay += Math.floor(Math.random() * 3);
+                        }
+                        firePixels[y][dstX] = Math.max(firePixels[y - 1][x] - decay, 0);
+                    }
+                }
+                for (let y = fireHeight - 1; y > fireHeight - 3; y--) {
+                    for (let x = 0; x < fireWidth; x++) {
+                        firePixels[y][x] = Math.max(firePixels[y][x] - 2, 0);
+                    }
+                }
+            }
+            
+            function fadeOutFire() {
+                for (let y = 0; y < fireHeight; y++) {
+                    for (let x = 0; x < fireWidth; x++) {
+                        firePixels[y][x] = Math.max(firePixels[y][x] - 3, 0);
+                    }
+                }
+            }
+            
+            function renderFire() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const pixelWidth = canvas.width / fireWidth;
+                const pixelHeight = canvas.height / fireHeight;
+                for (let y = 0; y < fireHeight; y++) {
+                    for (let x = 0; x < fireWidth; x++) {
+                        const colorIndex = firePixels[y][x];
+                        const color = fireColors[colorIndex];
+                        let alpha = color.a;
+                        if (y < fireHeight / 4) {
+                            alpha = color.a * (y / (fireHeight / 4));
+                        }
+                        ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+                        ctx.fillRect(x * pixelWidth, y * pixelHeight, pixelWidth, pixelHeight);
+                    }
+                }
+            }
+            
+            function animateFire(timestamp) {
+                if (!animationStartTime) {
+                    animationStartTime = timestamp;
+                }
+                
+                const elapsed = timestamp - animationStartTime;
+                const halfDuration = ANIMATION_DURATION / 2;
+                
+                if (elapsed < halfDuration && !isReversePhase) {
+                    spreadFire();
+                } 
+                else if (elapsed >= halfDuration && elapsed < FADE_OUT_START) {
+                    if (!isReversePhase) {
+                        isReversePhase = true;
+                    }
+                    spreadFireReverse();
+                }
+                else if (elapsed >= FADE_OUT_START && elapsed < ANIMATION_DURATION) {
+                    if (!isFadeOutPhase) {
+                        isFadeOutPhase = true;
+                        fireAnimation.classList.remove('active'); // 🔥 снимаем active при начале fadeOut
+                    }
+                    fadeOutFire();
+                }
+                else if (elapsed >= ANIMATION_DURATION) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                    animationStartTime = null;
+                    isReversePhase = false;
+                    isFadeOutPhase = false;
+                    return;
+                }
+                
+                renderFire();
+                animationId = requestAnimationFrame(animateFire);
+            }
+            
+            fireButton.addEventListener('click', function() {
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+                
+                animationStartTime = null;
+                isReversePhase = false;
+                isFadeOutPhase = false;
+                
+                initFire();
+                fireAnimation.classList.add('active');
+                animationId = requestAnimationFrame(animateFire);
+            });
+        });
+    </script>
+</body>
+</html>
