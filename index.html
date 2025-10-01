@@ -251,7 +251,7 @@
                 else if (elapsed >= FADE_OUT_START && elapsed < ANIMATION_DURATION) {
                     if (!isFadeOutPhase) {
                         isFadeOutPhase = true;
-                        fireAnimation.classList.remove('active'); // 🔥 снимаем active при начале fadeOut
+                        fireAnimation.classList.remove('active');
                     }
                     fadeOutFire();
                 }
@@ -268,7 +268,8 @@
                 animationId = requestAnimationFrame(animateFire);
             }
             
-            fireButton.addEventListener('click', function() {
+            // Основная функция для вызова анимации огня
+            function hellFire() {
                 if (animationId) {
                     cancelAnimationFrame(animationId);
                     animationId = null;
@@ -281,7 +282,13 @@
                 initFire();
                 fireAnimation.classList.add('active');
                 animationId = requestAnimationFrame(animateFire);
-            });
+            }
+            
+            // Привязываем функцию hellFire к кнопке
+            fireButton.addEventListener('click', hellFire);
+            
+            // Делаем функцию доступной глобально
+            window.hellFire = hellFire;
         });
     </script>
 </body>
